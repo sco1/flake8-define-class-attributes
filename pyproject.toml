@@ -1,0 +1,87 @@
+[project]
+name = "flake8-define-class-attributes"
+version = "0.1.0"
+description = "Check that class attributes are defined at the top level"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    {name = "sco1", email = "sco1.git@gmail.com"}
+]
+
+readme = "README.md"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
+
+requires-python = ">=3.11"
+dependencies = [
+    "flake8>=5.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/sco1/"
+Documentation = "https://github.com/sco1/flake8-define-class-attributes/blob/main/README.md"
+Repository = "https://github.com/sco1/flake8-define-class-attributes.git"
+Issues = "https://github.com/sco1/flake8-define-class-attributes/issues"
+Changelog = "https://github.com/sco1/flake8-define-class-attributes/blob/main/CHANGELOG.md"
+
+[project.entry-points."flake8.extension"]
+"CLA" = "flake8_define_class_attributes.checker:ClassAttributeChecker"
+
+[tool.uv]
+dev-dependencies = [
+    "black~=25.0",
+    "flake8~=7.1",
+    "flake8-annotations~=3.1",
+    "isort~=6.0",
+    "mypy~=1.14",
+    "pre-commit~=4.0",
+    "pytest~=8.3",
+    "pytest-check~=2.4",
+    "pytest-cov~=6.0",
+    "pytest-randomly~=3.16",
+    "ruff~=0.9",
+    "sco1-bumper~=2.0",
+    "tox~=4.23",
+    "tox-uv~=1.17",
+]
+
+[tool.black]
+line-length = 100
+
+[tool.isort]
+case_sensitive = true
+known_first_party = "flake8-define-class-attributes,tests"
+no_lines_before = "LOCALFOLDER"
+order_by_type = false
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+no_implicit_optional = true
+show_error_codes = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+[tool.uv.build-backend]
+module-name = "flake8_define_class_attributes"
+module-root = ""
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
