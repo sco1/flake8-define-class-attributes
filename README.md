@@ -5,7 +5,7 @@
 [![PyPI - License](https://img.shields.io/pypi/l/flake8-define-class-attributes?color=magenta)](https://github.com/sco1/flake8-define-class-attributes/blob/main/LICENSE)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/sco1/flake8-define-class-attributes/main.svg)](https://results.pre-commit.ci/latest/github/sco1/flake8-define-class-attributes/main)
 
-Check that class attributes are defined at the "top level" of your class. This is in the same spirit as Pylint's [`W0201` (`attribute-defined-outside-init`)]([attribute-defined-outside-init](https://pylint.readthedocs.io/en/latest/user_guide/messages/warning/attribute-defined-outside-init.html)) error, expanded to allow attribute declaration at the class level.
+Check that class attributes are defined at the "top level" of your class. This is in the same spirit as Pylint's [`W0201` (`attribute-defined-outside-init`)](https://pylint.readthedocs.io/en/latest/user_guide/messages/warning/attribute-defined-outside-init.html) error, expanded to allow attribute declaration at the class level.
 
 For example:
 
@@ -57,9 +57,9 @@ $ flake8 --version
 
 ## Warnings
 
-| ID       | Description                                      |
-|----------|--------------------------------------------------|
-| `CLA001` | Attribute <name> not defined prior to assignment |
+| ID       | Description                                        |
+|----------|----------------------------------------------------|
+| `CLA001` | Attribute `<name>` not defined prior to assignment |
 
 ## Python Version Support
 

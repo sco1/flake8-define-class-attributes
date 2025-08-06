@@ -5,6 +5,7 @@ import pytest
 from flake8_define_class_attributes.ast_walker import (
     AssignSpec,
     has_special_decorator,
+    resolve_assign,
     resolve_attribute,
 )
 
@@ -43,3 +44,24 @@ def test_resolve_attribute(src: str, truth_out: AssignSpec) -> None:
     assignment_target = tree.body[0].targets[0]  # type: ignore[attr-defined]
 
     assert resolve_attribute(assignment_target) == truth_out
+
+
+ASSIGN_TEST_CASES = (
+    ("a = 42", {AssignSpec("a", "")}),
+    ("a[1] = 42", {AssignSpec("a", "")}),
+    ("a += 42", {AssignSpec("a", "")}),
+    ("a[1] += 42", {AssignSpec("a", "")}),
+    ("self.a = 42", {AssignSpec("self", "a")}),
+    ("self.a, self.b = 42, 13", {AssignSpec("self", "a"), AssignSpec("self", "b")}),
+    ("self.a[1] = 42", {AssignSpec("self", "a")}),
+    ("self.a += 42", {AssignSpec("self", "a")}),
+    ("self.a[1] += 42", {AssignSpec("self", "a")}),
+)
+
+
+@pytest.mark.parametrize(("src", "truth_out"), ASSIGN_TEST_CASES)
+def test_resolve_assign(src: str, truth_out: set[AssignSpec]) -> None:
+    tree = ast.parse(src)
+    node = tree.body[0]
+
+    assert resolve_assign(node) == truth_out

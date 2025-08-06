@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import typing as t
 
@@ -26,6 +28,47 @@ class AssignSpec(t.NamedTuple):
 
     base: str
     attr: str
+
+
+class AssignNode(t.NamedTuple):
+    """
+    Helper container for `AssignSpec` that contains its associated node location.
+
+    NOTE: For downstream convenience, `AssignNode`'s `__eq__` and `__hash__` operations have been
+    modified to only consider `AssignNode.spec`.
+    """
+
+    spec: AssignSpec
+    lineno: int
+    col_offset: int
+    end_lineno: int | None
+    end_col_offset: int | None
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, AssignNode):
+            return NotImplemented
+
+        return self.spec == other.spec
+
+    def __hash__(self) -> int:
+        return hash(self.spec)
+
+    @classmethod
+    def from_node(cls, node: AST_ASSIGN_NODES_T) -> set[AssignNode]:
+        specs = resolve_assign(node)
+        # For now make the assignments share the base node's location information
+        # In the future it would probably be better to use the location from each target node but
+        # right now we're not preserving that during resolution
+        return {
+            cls(
+                spec=s,
+                lineno=node.lineno,
+                col_offset=node.col_offset,
+                end_lineno=node.end_lineno,
+                end_col_offset=node.end_col_offset,
+            )
+            for s in specs
+        }
 
 
 def resolve_attribute(base_node: ast.Attribute) -> AssignSpec:
@@ -85,8 +128,7 @@ def resolve_assign(node: ast.AST) -> set[AssignSpec]:
         case ast.Subscript():
             assigned.update(resolve_assign(node.value))
         case _:
-            print("Unhandled node:")
-            print(ast.dump(node))
+            raise ValueError(f"Unexpected node type: {type(node)}")
 
     return assigned
 
@@ -95,8 +137,9 @@ class FDCAVisitor(ast.NodeVisitor):
     _context: list[AST_DEF_NODES_T]
     _n_contained_classdef: int
 
-    _class_vars: set[AssignSpec]
-    _init_vars: set[AssignSpec]
+    _class_vars: set[AssignNode]
+    _init_vars: set[AssignNode]
+    _method_vars: set[AssignNode]
 
     def __init__(self) -> None:
         self._context = []
@@ -104,6 +147,7 @@ class FDCAVisitor(ast.NodeVisitor):
 
         self._class_vars = set()
         self._init_vars = set()
+        self._method_vars = set()
 
     def switch_context(self, node: AST_DEF_NODES_T) -> None:
         is_classdef = isinstance(node, ast.ClassDef)
@@ -127,16 +171,16 @@ class FDCAVisitor(ast.NodeVisitor):
         if self._n_contained_classdef == 0:
             return
 
+        new_nodes = AssignNode.from_node(node)
         if isinstance(self._context[-1], ast.ClassDef):
-            print("Class var", resolve_assign(node))
-            self._class_vars.update(resolve_assign(node))
+            self._class_vars.update(new_nodes)
         else:
+            self_nodes = (n for n in new_nodes if n.spec.base == "self")
             method_name = self._context[-1].name
             if method_name in {"__init__", "__post_init__"}:
-                print("Init Var", resolve_assign(node))
-                self._init_vars.update(resolve_assign(node))
+                self._init_vars.update(self_nodes)
             else:
-                print("Var from method: '{method_name}'", resolve_assign(node))
+                self._method_vars.update(self_nodes)
 
     visit_FunctionDef = switch_context
     visit_AsyncFunctionDef = switch_context

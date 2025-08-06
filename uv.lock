@@ -255,7 +255,7 @@ dev = [
     { name = "pytest-cov", specifier = "~=6.0" },
     { name = "pytest-randomly", specifier = "~=3.16" },
     { name = "ruff", specifier = "~=0.9" },
-    { name = "rumdl", specifier = ">=0.0.106" },
+    { name = "rumdl", specifier = "~=0.0.106" },
     { name = "sco1-bumper", specifier = "~=2.0" },
     { name = "tox", specifier = "~=4.23" },
     { name = "tox-uv", specifier = "~=1.17" },
