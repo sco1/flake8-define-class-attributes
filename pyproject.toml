@@ -49,6 +49,7 @@ dev-dependencies = [
     "pytest-cov~=6.0",
     "pytest-randomly~=3.16",
     "ruff~=0.9",
+    "rumdl~=0.0.106",
     "sco1-bumper~=2.0",
     "tox~=4.23",
     "tox-uv~=1.17",
@@ -77,6 +78,10 @@ warn_redundant_casts = true
 warn_return_any = true
 warn_unused_configs = true
 warn_unused_ignores = true
+
+[tool.rumdl]
+line-length = 100
+disable = ["MD013", "MD033"]
 
 [tool.uv.build-backend]
 module-name = "flake8_define_class_attributes"
