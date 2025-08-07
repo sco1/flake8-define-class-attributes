@@ -38,3 +38,15 @@ repos:
     rev: v0.12.7
     hooks:
       - id: ruff-check
+  - repo: https://github.com/rvben/rumdl-pre-commit
+    rev: v0.0.108
+    hooks:
+      - id: rumdl
+  - repo: local
+    hooks:
+      - id: flake8
+        name: flake8-local
+        description: This hook runs flake8 within our project's uv environment for self-check.
+        entry: uv run flake8
+        language: python
+        types: [python]

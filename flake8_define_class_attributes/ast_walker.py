@@ -8,6 +8,12 @@ AST_DEF_NODES_T: t.TypeAlias = AST_FUNC_NODES_T | ast.ClassDef
 AST_ASSIGN_NODES_T: t.TypeAlias = ast.Assign | ast.AnnAssign | ast.AugAssign
 
 
+@t.runtime_checkable
+class HasLoc(t.Protocol):  # noqa: D101
+    lineno: int
+    col_offset: int
+
+
 def has_special_decorator(node: AST_FUNC_NODES_T) -> bool:
     """Return `True` if the node is decorated with `@classmethod` or `@staticmethod`."""
     for d in node.decorator_list:
@@ -70,6 +76,11 @@ class AssignNode(t.NamedTuple):
             for s in specs
         }
 
+    def as_fake_class_var(self) -> AssignNode:
+        spec, *rest = self
+        spec = AssignSpec(spec.attr, "")
+        return AssignNode(spec, *rest)  # type: ignore[arg-type]
+
 
 def resolve_attribute(base_node: ast.Attribute) -> AssignSpec:
     """
@@ -101,7 +112,9 @@ def resolve_attribute(base_node: ast.Attribute) -> AssignSpec:
         return AssignSpec(node.id, attr)
     else:
         # Not sure if this can actually be reached
-        raise ValueError(f"Unexpected node type: {type(node)}")
+        raise ValueError(
+            f"{base_node.lineno}:{base_node.col_offset} Unexpected node type: {type(node)}"
+        )
 
 
 def resolve_assign(node: ast.AST) -> set[AssignSpec]:
@@ -125,10 +138,16 @@ def resolve_assign(node: ast.AST) -> set[AssignSpec]:
             assigned.add(resolve_attribute(node))
         case ast.Name():
             assigned.add(AssignSpec(node.id, ""))
-        case ast.Subscript():
+        case ast.Subscript() | ast.Starred():
             assigned.update(resolve_assign(node.value))
         case _:
-            raise ValueError(f"Unexpected node type: {type(node)}")
+            msg_base = f"Unexpected node type: {type(node)}"
+            if isinstance(node, HasLoc):
+                msg = f"{node.lineno}:{node.col_offset} {msg_base}"
+            else:
+                msg = msg_base
+
+            raise ValueError(msg)
 
     return assigned
 
@@ -137,17 +156,17 @@ class FDCAVisitor(ast.NodeVisitor):
     _context: list[AST_DEF_NODES_T]
     _n_contained_classdef: int
 
-    _class_vars: set[AssignNode]
-    _init_vars: set[AssignNode]
-    _method_vars: set[AssignNode]
+    class_vars: set[AssignNode]
+    init_vars: set[AssignNode]
+    method_vars: set[AssignNode]
 
     def __init__(self) -> None:
         self._context = []
         self._n_contained_classdef = 0
 
-        self._class_vars = set()
-        self._init_vars = set()
-        self._method_vars = set()
+        self.class_vars = set()
+        self.init_vars = set()
+        self.method_vars = set()
 
     def switch_context(self, node: AST_DEF_NODES_T) -> None:
         is_classdef = isinstance(node, ast.ClassDef)
@@ -173,14 +192,14 @@ class FDCAVisitor(ast.NodeVisitor):
 
         new_nodes = AssignNode.from_node(node)
         if isinstance(self._context[-1], ast.ClassDef):
-            self._class_vars.update(new_nodes)
+            self.class_vars.update(new_nodes)
         else:
             self_nodes = (n for n in new_nodes if n.spec.base == "self")
             method_name = self._context[-1].name
             if method_name in {"__init__", "__post_init__"}:
-                self._init_vars.update(self_nodes)
+                self.init_vars.update(self_nodes)
             else:
-                self._method_vars.update(self_nodes)
+                self.method_vars.update(self_nodes)
 
     visit_FunctionDef = switch_context
     visit_AsyncFunctionDef = switch_context

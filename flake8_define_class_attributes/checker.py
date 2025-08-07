@@ -11,7 +11,7 @@ class CLA001:
     def __init__(self, node: AssignNode) -> None:
         self.attr_name = node.spec.attr
 
-        self.msg = f"Attribute {self.attr_name} not defined prior to assignment"
+        self.msg = f"CLA001 Attribute '{self.attr_name}' not defined prior to assignment"
         self.lineno = node.lineno
         self.col_offset = node.col_offset
 
@@ -36,3 +36,15 @@ class ClassAttributeChecker:
         if self.tree is not None:
             visitor = FDCAVisitor()
             visitor.visit(self.tree)
+
+        for a in visitor.method_vars:
+            if a.spec.base != "self":
+                continue
+            elif a in visitor.init_vars:
+                continue
+
+            # Since class vars have an attribute but no base, need to use a dummy version of the
+            # assignment we're checking to emulate a class var
+            # Not the prettiest but want to get something working first
+            if a.as_fake_class_var() not in visitor.class_vars:
+                yield CLA001(a).to_flake8()
