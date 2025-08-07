@@ -1,4 +1,5 @@
 ci:
+  skip: [flake8-local]
   autoupdate_schedule: quarterly
 
 repos:
@@ -44,7 +45,7 @@ repos:
       - id: rumdl
   - repo: local
     hooks:
-      - id: flake8
+      - id: flake8-local
         name: flake8-local
         description: This hook runs flake8 within our project's uv environment for self-check.
         entry: uv run flake8

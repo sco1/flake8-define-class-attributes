@@ -61,6 +61,13 @@ class AssignNode(t.NamedTuple):
 
     @classmethod
     def from_node(cls, node: AST_ASSIGN_NODES_T) -> set[AssignNode]:
+        """
+        Build an `AssignNode` instance from the provided assignment statement.
+
+        NOTE: In cases where an assignment statement has multiple targets (e.g. `a,b = c`), location
+        information for the extracted assignment targets will all share that of the base assignment
+        node.
+        """
         specs = resolve_assign(node)
         # For now make the assignments share the base node's location information
         # In the future it would probably be better to use the location from each target node but
@@ -77,6 +84,11 @@ class AssignNode(t.NamedTuple):
         }
 
     def as_fake_class_var(self) -> AssignNode:
+        """
+        Return a new `AssignNode` instance whose `spec` is transformed to emulate a class variable.
+
+        For exampale, `AssignSpec("self", "a")` -> `AssignSpec("a", "")`
+        """
         spec, *rest = self
         spec = AssignSpec(spec.attr, "")
         return AssignNode(spec, *rest)  # type: ignore[arg-type]
@@ -153,6 +165,22 @@ def resolve_assign(node: ast.AST) -> set[AssignSpec]:
 
 
 class FDCAVisitor(ast.NodeVisitor):
+    """
+    Subclass `ast.NodeVisitor` to visit class definitions & extract assignment statements.
+
+    As the class definition is walked, assignment statements are extracted into `AssignNode`
+    instances, which contain information on the assignment as well as its source location.
+
+    Extracted assignments are grouped as follows:
+        * `class_vars` - Class-level attribute definitions
+        * `init_vars` - Class attributes defined in `__init__` or `__post_init__`
+        * `method_vars` - Class attributes defined in methods (`@classmethod` and `@staticmethod`
+        are ignored)
+
+    NOTE: Attribute extraction from methods currently assumes that `self` is declared as the
+    instance variable. All other attribute access, as well as non-attribute assignment, is ignored.
+    """
+
     _context: list[AST_DEF_NODES_T]
     _n_contained_classdef: int
 
@@ -169,6 +197,7 @@ class FDCAVisitor(ast.NodeVisitor):
         self.method_vars = set()
 
     def switch_context(self, node: AST_DEF_NODES_T) -> None:
+        """Keep track of class & function context to assist with dispatching walk behavior."""
         is_classdef = isinstance(node, ast.ClassDef)
         if is_classdef:  # For downstream bookkeeping so we don't have to iterate through _context
             self._n_contained_classdef += 1
@@ -186,6 +215,19 @@ class FDCAVisitor(ast.NodeVisitor):
             self._n_contained_classdef -= 1
 
     def visit_assign(self, node: AST_ASSIGN_NODES_T) -> None:
+        """
+        Visit an assignment statement and store it if relevant.
+
+        Extracted assignments are grouped as follows:
+            * `class_vars` - Class-level attribute definitions
+            * `init_vars` - Class attributes defined in `__init__` or `__post_init__`
+            * `method_vars` - Class attributes defined in methods (`@classmethod` and
+            `@staticmethod` are ignored)
+
+        NOTE: Attribute extraction from methods currently assumes that `self` is declared as the
+        instance variable. All other attribute access, as well as non-attribute assignment, is
+        ignored.
+        """
         # Rather than checking if any context is a classdef, we have a bookkeeping counter upstream
         if self._n_contained_classdef == 0:
             return

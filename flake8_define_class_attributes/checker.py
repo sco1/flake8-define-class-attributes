@@ -7,7 +7,7 @@ from flake8_define_class_attributes.ast_walker import AssignNode, FDCAVisitor
 FORMATTED_ERROR: t.TypeAlias = tuple[int, int, str, t.Type[t.Any]]
 
 
-class CLA001:
+class CLA001:  # noqa: D101
     def __init__(self, node: AssignNode) -> None:
         self.attr_name = node.spec.attr
 
@@ -15,11 +15,11 @@ class CLA001:
         self.lineno = node.lineno
         self.col_offset = node.col_offset
 
-    def to_flake8(self) -> FORMATTED_ERROR:
+    def to_flake8(self) -> FORMATTED_ERROR:  # noqa: D102
         return (self.lineno, self.col_offset, self.msg, ClassAttributeChecker)
 
 
-class ClassAttributeChecker:
+class ClassAttributeChecker:  # noqa: D101
     name = "flake8-define-class-attributes"
     version = __version__
 
@@ -36,11 +36,11 @@ class ClassAttributeChecker:
         if self.tree is not None:
             visitor = FDCAVisitor()
             visitor.visit(self.tree)
+        else:
+            return
 
         for a in visitor.method_vars:
-            if a.spec.base != "self":
-                continue
-            elif a in visitor.init_vars:
+            if a in visitor.init_vars:
                 continue
 
             # Since class vars have an attribute but no base, need to use a dummy version of the
