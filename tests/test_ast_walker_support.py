@@ -82,6 +82,6 @@ INSTANCE_VAR_TEST_CASES = (
 @pytest.mark.parametrize(("src", "truth_out"), INSTANCE_VAR_TEST_CASES)
 def test_resolve_instance_name(src: str, truth_out: str) -> None:
     tree = ast.parse(src)
-    node = tree.body[0].body[0]
+    node = tree.body[0].body[0]  # type: ignore[attr-defined]
 
     assert resolve_instance_name(node) == truth_out

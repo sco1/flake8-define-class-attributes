@@ -1,5 +1,5 @@
 [tool.bumper]
-current_version = "0.1.0"
+current_version = "0.2.0"
 versioning_type = "semver"
 
 [[tool.bumper.files]]
@@ -9,6 +9,10 @@ search = 'version = "{current_version}"'
 [[tool.bumper.files]]
 file = "./README.md"
 search = "flake8-define-class-attributes/{current_version}"
+
+[[tool.bumper.files]]
+file = "./README.md"
+search = "flake8-define-class-attributes: {current_version},"
 
 [[tool.bumper.files]]
 file = "./flake8_define_class_attributes/__init__.py"
