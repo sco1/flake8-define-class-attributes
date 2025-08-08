@@ -3,31 +3,12 @@ import ast
 import pytest
 
 from flake8_define_class_attributes.ast_walker import (
-    AssignNode,
     AssignSpec,
     has_special_decorator,
     resolve_assign,
     resolve_attribute,
+    resolve_instance_name,
 )
-from tests import ASSIGN_NODE_P
-
-
-def test_assignnode_eq() -> None:
-    left = AssignNode(
-        spec=AssignSpec("a", "b"), lineno=1, col_offset=2, end_lineno=None, end_col_offset=None
-    )
-    right = AssignNode(
-        spec=AssignSpec("a", "b"), lineno=3, col_offset=4, end_lineno=None, end_col_offset=None
-    )
-
-    assert left == right
-
-
-def test_assignmode_hash() -> None:
-    spec = AssignSpec("a", "b")
-    node = AssignNode(spec=spec, lineno=1, col_offset=2, end_lineno=None, end_col_offset=None)
-    assert hash(node) == hash(spec)
-
 
 DECORATOR_TEST_CASES = (
     ("@classmethod\ndef foo(self): ...", True),
@@ -92,30 +73,15 @@ def test_resolve_assign(src: str, truth_out: set[AssignSpec]) -> None:
     assert resolve_assign(node) == truth_out
 
 
-ASSIGN_NODE_TEST_CASES = (
-    ("a = 42", {ASSIGN_NODE_P(spec=AssignSpec("a", ""))}),
-    (
-        "a, b = 42, 13",
-        {ASSIGN_NODE_P(spec=AssignSpec("a", "")), ASSIGN_NODE_P(spec=AssignSpec("b", ""))},
-    ),
+INSTANCE_VAR_TEST_CASES = (
+    ("class Foo:\n\tdef __init__(self): ...", "self"),
+    ("class Foo:\n\tdef __init__(slef): ...", "slef"),
 )
 
 
-@pytest.mark.parametrize(("src", "truth_out"), ASSIGN_NODE_TEST_CASES)
-def test_assign_node(src: str, truth_out: set[AssignNode]) -> None:
+@pytest.mark.parametrize(("src", "truth_out"), INSTANCE_VAR_TEST_CASES)
+def test_resolve_instance_name(src: str, truth_out: str) -> None:
     tree = ast.parse(src)
-    node = tree.body[0]
+    node = tree.body[0].body[0]
 
-    assert AssignNode.from_node(node) == truth_out  # type: ignore[arg-type]
-
-
-def test_fake_class_var() -> None:
-    node = AssignNode(
-        spec=AssignSpec("self", "a"), lineno=1, col_offset=2, end_lineno=None, end_col_offset=None
-    )
-
-    TRUTH_OUT = AssignNode(
-        spec=AssignSpec("a", ""), lineno=1, col_offset=2, end_lineno=None, end_col_offset=None
-    )
-
-    assert node.as_fake_class_var() == TRUTH_OUT
+    assert resolve_instance_name(node) == truth_out

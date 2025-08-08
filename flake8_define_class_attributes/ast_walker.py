@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import typing as t
+from functools import lru_cache
 
 AST_FUNC_NODES_T: t.TypeAlias = ast.FunctionDef | ast.AsyncFunctionDef
 AST_DEF_NODES_T: t.TypeAlias = AST_FUNC_NODES_T | ast.ClassDef
@@ -36,62 +37,36 @@ class AssignSpec(t.NamedTuple):
     attr: str
 
 
-class AssignNode(t.NamedTuple):
+class SelfAssignNode(t.NamedTuple):
     """
-    Helper container for `AssignSpec` that contains its associated node location.
+    Helper container for a class or instance attribute that contains its associated node location.
 
-    NOTE: For downstream convenience, `AssignNode`'s `__eq__` and `__hash__` operations have been
-    modified to only consider `AssignNode.spec`.
+    If this is instaniated, it is assumed that the containing class defines this variable as either
+    a class attribute or an instance attribute in `__init__` and/or `__post_init__`.
     """
 
-    spec: AssignSpec
+    attr: str
     lineno: int
     col_offset: int
     end_lineno: int | None
     end_col_offset: int | None
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, AssignNode):
-            return NotImplemented
-
-        return self.spec == other.spec
-
-    def __hash__(self) -> int:
-        return hash(self.spec)
-
     @classmethod
-    def from_node(cls, node: AST_ASSIGN_NODES_T) -> set[AssignNode]:
+    def from_node(cls, attr: str, node: AST_ASSIGN_NODES_T) -> SelfAssignNode:
         """
-        Build an `AssignNode` instance from the provided assignment statement.
+        Build an `SelfAssignNode` instance from the provided assignment node.
 
         NOTE: In cases where an assignment statement has multiple targets (e.g. `a,b = c`), location
         information for the extracted assignment targets will all share that of the base assignment
         node.
         """
-        specs = resolve_assign(node)
-        # For now make the assignments share the base node's location information
-        # In the future it would probably be better to use the location from each target node but
-        # right now we're not preserving that during resolution
-        return {
-            cls(
-                spec=s,
-                lineno=node.lineno,
-                col_offset=node.col_offset,
-                end_lineno=node.end_lineno,
-                end_col_offset=node.end_col_offset,
-            )
-            for s in specs
-        }
-
-    def as_fake_class_var(self) -> AssignNode:
-        """
-        Return a new `AssignNode` instance whose `spec` is transformed to emulate a class variable.
-
-        For exampale, `AssignSpec("self", "a")` -> `AssignSpec("a", "")`
-        """
-        spec, *rest = self
-        spec = AssignSpec(spec.attr, "")
-        return AssignNode(spec, *rest)  # type: ignore[arg-type]
+        return cls(
+            attr=attr,
+            lineno=node.lineno,
+            col_offset=node.col_offset,
+            end_lineno=node.end_lineno,
+            end_col_offset=node.end_col_offset,
+        )
 
 
 def resolve_attribute(base_node: ast.Attribute) -> AssignSpec:
@@ -164,6 +139,14 @@ def resolve_assign(node: ast.AST) -> set[AssignSpec]:
     return assigned
 
 
+@lru_cache
+def resolve_instance_name(node: AST_FUNC_NODES_T) -> str:
+    """Resolve the name of the instance variable of a class method, assumed to be the first var."""
+    # Probably a needless optimization, but use a function so we can cache since this is being
+    # called for each variable within a function's context
+    return node.args.args[0].arg
+
+
 class FDCAVisitor(ast.NodeVisitor):
     """
     Subclass `ast.NodeVisitor` to visit class definitions & extract assignment statements.
@@ -176,17 +159,14 @@ class FDCAVisitor(ast.NodeVisitor):
         * `init_vars` - Class attributes defined in `__init__` or `__post_init__`
         * `method_vars` - Class attributes defined in methods (`@classmethod` and `@staticmethod`
         are ignored)
-
-    NOTE: Attribute extraction from methods currently assumes that `self` is declared as the
-    instance variable. All other attribute access, as well as non-attribute assignment, is ignored.
     """
 
     _context: list[AST_DEF_NODES_T]
     _n_contained_classdef: int
 
-    class_vars: set[AssignNode]
-    init_vars: set[AssignNode]
-    method_vars: set[AssignNode]
+    class_vars: set[str]
+    init_vars: set[str]
+    method_vars: list[SelfAssignNode]
 
     def __init__(self) -> None:
         self._context = []
@@ -194,7 +174,7 @@ class FDCAVisitor(ast.NodeVisitor):
 
         self.class_vars = set()
         self.init_vars = set()
-        self.method_vars = set()
+        self.method_vars = []
 
     def switch_context(self, node: AST_DEF_NODES_T) -> None:
         """Keep track of class & function context to assist with dispatching walk behavior."""
@@ -223,25 +203,26 @@ class FDCAVisitor(ast.NodeVisitor):
             * `init_vars` - Class attributes defined in `__init__` or `__post_init__`
             * `method_vars` - Class attributes defined in methods (`@classmethod` and
             `@staticmethod` are ignored)
-
-        NOTE: Attribute extraction from methods currently assumes that `self` is declared as the
-        instance variable. All other attribute access, as well as non-attribute assignment, is
-        ignored.
         """
         # Rather than checking if any context is a classdef, we have a bookkeeping counter upstream
         if self._n_contained_classdef == 0:
             return
 
-        new_nodes = AssignNode.from_node(node)
+        new_nodes = resolve_assign(node)
         if isinstance(self._context[-1], ast.ClassDef):
-            self.class_vars.update(new_nodes)
+            self.class_vars.update(s.base for s in new_nodes)
         else:
-            self_nodes = (n for n in new_nodes if n.spec.base == "self")
+            instance_varname = resolve_instance_name(self._context[-1])
+            self_nodes = (n for n in new_nodes if n.base == instance_varname)
+
             method_name = self._context[-1].name
             if method_name in {"__init__", "__post_init__"}:
-                self.init_vars.update(self_nodes)
+                self.init_vars.update(s.attr for s in self_nodes)
             else:
-                self.method_vars.update(self_nodes)
+                # Retain node location information for methods so we can emit errors downstream
+                self.method_vars.extend(
+                    (SelfAssignNode.from_node(s.attr, node) for s in self_nodes)
+                )
 
     visit_FunctionDef = switch_context
     visit_AsyncFunctionDef = switch_context

@@ -3,13 +3,14 @@ import typing as t
 
 import pytest
 
-from flake8_define_class_attributes.ast_walker import AssignSpec
+from flake8_define_class_attributes.ast_walker import SelfAssignNode
 from flake8_define_class_attributes.checker import CLA001, ClassAttributeChecker, FORMATTED_ERROR
-from tests import ASSIGN_NODE_P
 
 
 def test_err_to_flake8() -> None:
-    err = CLA001(ASSIGN_NODE_P(spec=AssignSpec("self", "a")))
+    err = CLA001(
+        SelfAssignNode(attr="a", lineno=0, col_offset=1, end_lineno=None, end_col_offset=None)
+    )
     TRUTH_OUT = (
         0,
         1,
@@ -135,6 +136,18 @@ def beans(self):
     truth_errors=set(),
 )
 
+CLASS_WITH_MIXED_INSTANCE_VARNAME = SourceCheckCase(
+    src="""\
+class Foo:
+    def __init__(self):
+        self.a = 1
+
+    def beans(slef):
+        slef.a = 5
+""",
+    truth_errors=set(),
+)
+
 # These should yield errors
 CLASS_WITH_UNDEFINED_VAR = SourceCheckCase(
     src="""\
@@ -143,7 +156,9 @@ class Foo:
         self.a = 5
 """,
     truth_errors={
-        CLA001(ASSIGN_NODE_P(spec=AssignSpec("self", "a"), lineno=3, col_offset=8)).to_flake8()
+        CLA001(
+            SelfAssignNode(attr="a", lineno=3, col_offset=8, end_lineno=None, end_col_offset=None)
+        ).to_flake8()
     },
 )
 
@@ -162,8 +177,12 @@ class Foo:
         self.f = 6
 """,
     truth_errors={
-        CLA001(ASSIGN_NODE_P(spec=AssignSpec("self", "e"), lineno=10, col_offset=8)).to_flake8(),
-        CLA001(ASSIGN_NODE_P(spec=AssignSpec("self", "f"), lineno=11, col_offset=8)).to_flake8(),
+        CLA001(
+            SelfAssignNode(attr="e", lineno=10, col_offset=8, end_lineno=None, end_col_offset=None)
+        ).to_flake8(),
+        CLA001(
+            SelfAssignNode(attr="f", lineno=11, col_offset=8, end_lineno=None, end_col_offset=None)
+        ).to_flake8(),
     },
 )
 
@@ -181,6 +200,7 @@ SRC_CHECK_CASES = (
     CLASS_WITH_DEFINED_METHODVAR_AS_INITVAR,
     CLASS_WITH_METHOD_NON_SELF_ATTR,
     SNEAKY_DEF_NOT_IN_CLASS,
+    CLASS_WITH_MIXED_INSTANCE_VARNAME,
     # These should yield errors
     CLASS_WITH_UNDEFINED_VAR,
     CLASS_WITH_MULTI_UNDEFINED_VAR,

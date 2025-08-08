@@ -3,15 +3,14 @@ import typing as t
 
 import pytest
 
-from flake8_define_class_attributes.ast_walker import AssignNode, AssignSpec, FDCAVisitor
-from tests import ASSIGN_NODE_P
+from flake8_define_class_attributes.ast_walker import FDCAVisitor, SelfAssignNode
 
 
 class SourceWalkCase(t.NamedTuple):
     src: str
-    truth_class_vars: set[AssignNode]
-    truth_init_vars: set[AssignNode]
-    truth_method_vars: set[AssignNode]
+    truth_class_vars: set[str]
+    truth_init_vars: set[str]
+    truth_method_vars: list[SelfAssignNode]
 
 
 EMPTY_CLASS = SourceWalkCase(
@@ -20,7 +19,7 @@ class Foo: ...
 """,
     truth_class_vars=set(),
     truth_init_vars=set(),
-    truth_method_vars=set(),
+    truth_method_vars=[],
 )
 
 CLASS_WITH_CLASSVAR = SourceWalkCase(
@@ -28,9 +27,9 @@ CLASS_WITH_CLASSVAR = SourceWalkCase(
 class Foo:
     a = 5
 """,
-    truth_class_vars={ASSIGN_NODE_P(spec=AssignSpec("a", ""))},
+    truth_class_vars={"a"},
     truth_init_vars=set(),
-    truth_method_vars=set(),
+    truth_method_vars=[],
 )
 
 CLASS_WITH_INITVAR = SourceWalkCase(
@@ -40,8 +39,8 @@ class Foo:
         self.a = 5
 """,
     truth_class_vars=set(),
-    truth_init_vars={ASSIGN_NODE_P(spec=AssignSpec("self", "a"))},
-    truth_method_vars=set(),
+    truth_init_vars={"a"},
+    truth_method_vars=[],
 )
 
 
@@ -53,7 +52,9 @@ class Foo:
 """,
     truth_class_vars=set(),
     truth_init_vars=set(),
-    truth_method_vars={ASSIGN_NODE_P(spec=AssignSpec("self", "a"))},
+    truth_method_vars=[
+        SelfAssignNode(attr="a", lineno=3, col_offset=8, end_lineno=3, end_col_offset=18)
+    ],
 )
 
 CLASS_WITH_METHODVAR_NON_SELF_ATTR = SourceWalkCase(
@@ -64,7 +65,7 @@ class Foo:
 """,
     truth_class_vars=set(),
     truth_init_vars=set(),
-    truth_method_vars=set(),
+    truth_method_vars=[],
 )
 
 CLASS_WITH_CLASSMETHOD = SourceWalkCase(
@@ -76,7 +77,7 @@ class Foo:
 """,
     truth_class_vars=set(),
     truth_init_vars=set(),
-    truth_method_vars=set(),
+    truth_method_vars=[],
 )
 
 CLASS_WITH_STATICMETHOD = SourceWalkCase(
@@ -88,7 +89,7 @@ class Foo:
 """,
     truth_class_vars=set(),
     truth_init_vars=set(),
-    truth_method_vars=set(),
+    truth_method_vars=[],
 )
 
 
@@ -103,9 +104,11 @@ class Foo:
     def beans(self):
         self.c = 5
 """,
-    truth_class_vars={ASSIGN_NODE_P(spec=AssignSpec("a", ""))},
-    truth_init_vars={ASSIGN_NODE_P(spec=AssignSpec("self", "b"))},
-    truth_method_vars={ASSIGN_NODE_P(spec=AssignSpec("self", "c"))},
+    truth_class_vars={"a"},
+    truth_init_vars={"b"},
+    truth_method_vars=[
+        SelfAssignNode(attr="c", lineno=8, col_offset=8, end_lineno=8, end_col_offset=18)
+    ],
 )
 
 CLASS_WITH_ALL_VAR_MULTI = SourceWalkCase(
@@ -122,18 +125,12 @@ class Foo:
         self.e = 5
         self.f = 6
 """,
-    truth_class_vars={
-        ASSIGN_NODE_P(spec=AssignSpec("a", "")),
-        ASSIGN_NODE_P(spec=AssignSpec("b", "")),
-    },
-    truth_init_vars={
-        ASSIGN_NODE_P(spec=AssignSpec("self", "c")),
-        ASSIGN_NODE_P(spec=AssignSpec("self", "d")),
-    },
-    truth_method_vars={
-        ASSIGN_NODE_P(spec=AssignSpec("self", "e")),
-        ASSIGN_NODE_P(spec=AssignSpec("self", "f")),
-    },
+    truth_class_vars={"a", "b"},
+    truth_init_vars={"c", "d"},
+    truth_method_vars=[
+        SelfAssignNode(attr="e", lineno=10, col_offset=8, end_lineno=10, end_col_offset=18),
+        SelfAssignNode(attr="f", lineno=11, col_offset=8, end_lineno=11, end_col_offset=18),
+    ],
 )
 
 
@@ -145,9 +142,9 @@ from dataclasses import dataclass
 class Foo:
     a: int = 5
 """,
-    truth_class_vars={ASSIGN_NODE_P(spec=AssignSpec("a", ""))},
+    truth_class_vars={"a"},
     truth_init_vars=set(),
-    truth_method_vars=set(),
+    truth_method_vars=[],
 )
 
 DATACLASS_WITH_POST_INIT = SourceWalkCase(
@@ -161,9 +158,9 @@ class Foo:
     def __post_init__(self):
         self.b = a
 """,
-    truth_class_vars={ASSIGN_NODE_P(spec=AssignSpec("a", ""))},
-    truth_init_vars={ASSIGN_NODE_P(spec=AssignSpec("self", "b"))},
-    truth_method_vars=set(),
+    truth_class_vars={"a"},
+    truth_init_vars={"b"},
+    truth_method_vars=[],
 )
 
 SNEAKY_DEF_NOT_IN_CLASS = SourceWalkCase(
@@ -173,7 +170,7 @@ def beans(self):
 """,
     truth_class_vars=set(),
     truth_init_vars=set(),
-    truth_method_vars=set(),
+    truth_method_vars=[],
 )
 
 
@@ -198,9 +195,9 @@ SRC_WALK_TEST_CASES = (
 )
 def test_src_walk(
     src: str,
-    truth_class_vars: set[AssignNode],
-    truth_init_vars: set[AssignNode],
-    truth_method_vars: set[AssignNode],
+    truth_class_vars: set[str],
+    truth_init_vars: set[str],
+    truth_method_vars: list[SelfAssignNode],
 ) -> None:
     tree = ast.parse(src)
     visitor = FDCAVisitor()

@@ -2,14 +2,14 @@ import ast
 import typing as t
 
 from flake8_define_class_attributes import __version__
-from flake8_define_class_attributes.ast_walker import AssignNode, FDCAVisitor
+from flake8_define_class_attributes.ast_walker import FDCAVisitor, SelfAssignNode
 
 FORMATTED_ERROR: t.TypeAlias = tuple[int, int, str, t.Type[t.Any]]
 
 
 class CLA001:  # noqa: D101
-    def __init__(self, node: AssignNode) -> None:
-        self.attr_name = node.spec.attr
+    def __init__(self, node: SelfAssignNode) -> None:
+        self.attr_name = node.attr
 
         self.msg = f"CLA001 Attribute '{self.attr_name}' not defined prior to assignment"
         self.lineno = node.lineno
@@ -40,11 +40,7 @@ class ClassAttributeChecker:  # noqa: D101
             return
 
         for a in visitor.method_vars:
-            if a in visitor.init_vars:
+            if (a.attr in visitor.init_vars) or (a.attr in visitor.class_vars):
                 continue
 
-            # Since class vars have an attribute but no base, need to use a dummy version of the
-            # assignment we're checking to emulate a class var
-            # Not the prettiest but want to get something working first
-            if a.as_fake_class_var() not in visitor.class_vars:
-                yield CLA001(a).to_flake8()
+            yield CLA001(a).to_flake8()
