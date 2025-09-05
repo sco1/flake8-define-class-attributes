@@ -44,6 +44,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Get Non-Hyphenated Python Version
+      id: get-pyver
+      run: |
+        echo "PYVER=$(cut -d '-' -f 1 <<< ${{ matrix.python-version }})" >> $GITHUB_OUTPUT
+
     - name: Set up (release) Python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
       if: "!endsWith(matrix.python-version, '-dev')"
@@ -65,11 +70,12 @@ jobs:
 
     - name: Install dependencies
       run: |
-        uv venv
-        uv pip install tox-gh-actions tox-uv
+        uv venv --python ${{ steps.get-pyver.outputs.PYVER }}
+        uv pip install tox-uv
 
     - name: Run tests w/tox
-      run: uv run tox
+      run: |
+        uv run tox -e ${{ steps.get-pyver.outputs.PYVER }}
 
     - name: Cache coverage for ${{ matrix.python-version }}
       uses: actions/upload-artifact@v4
