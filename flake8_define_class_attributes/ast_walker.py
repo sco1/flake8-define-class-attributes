@@ -176,6 +176,24 @@ class FDCAVisitor(ast.NodeVisitor):
         self.init_vars = set()
         self.method_vars = []
 
+    @property
+    def _n_function_levels(self) -> int:
+        """
+        Depth of current context from the most recent `ClassDef`.
+
+        Returns `None` if no `ClassDef` is contained in context
+        """
+        depth = 0
+        for node in reversed(self._context):
+            if isinstance(node, ast.ClassDef):
+                return depth
+
+            depth += 1
+
+        # Included for completeness. This should already guarded upstream & is only called if the
+        # context tree contains at least one ClassDef node
+        raise RuntimeError("Attempted to find depth from ClassDef with none in context")
+
     def switch_context(self, node: AST_DEF_NODES_T) -> None:
         """Keep track of class & function context to assist with dispatching walk behavior."""
         is_classdef = isinstance(node, ast.ClassDef)
@@ -212,10 +230,17 @@ class FDCAVisitor(ast.NodeVisitor):
         if isinstance(self._context[-1], ast.ClassDef):
             self.class_vars.update(s.base for s in new_nodes)
         else:
-            instance_varname = resolve_instance_name(self._context[-1])
+            # To account for nested function scoping, determine the depth of the current node and
+            # use the one whose parent context is the containing ClassDef node. This should
+            # hopefully end up being the function that accepts the instance variable.
+            # This isn't perfect, e.g. things might go badly if the nested function accepts the
+            # instance under a new name, but I think it should do well for most projects?
+            method_level = self._context[-self._n_function_levels]
+
+            instance_varname = resolve_instance_name(method_level)
             self_nodes = (n for n in new_nodes if n.base == instance_varname)
 
-            method_name = self._context[-1].name
+            method_name = method_level.name
             if method_name in {"__init__", "__post_init__"}:
                 self.init_vars.update(s.attr for s in self_nodes)
             else:

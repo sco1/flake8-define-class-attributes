@@ -148,6 +148,18 @@ class Foo:
     truth_errors=set(),
 )
 
+CLASS_WITH_NESTED_DEFINED_VAR = SourceCheckCase(
+    src="""\
+class Foo:
+    a: int = 1
+
+    def beans(self):
+        def deep_beans():
+            self.a = 1
+""",
+    truth_errors=set(),
+)
+
 # These should yield errors
 CLASS_WITH_UNDEFINED_VAR = SourceCheckCase(
     src="""\
@@ -186,6 +198,20 @@ class Foo:
     },
 )
 
+CLASS_WITH_NESTED_UNDEFINED_VAR = SourceCheckCase(
+    src="""\
+class Foo:
+    def beans(self):
+        def deep_beans():
+            self.a = 1
+""",
+    truth_errors={
+        CLA001(
+            SelfAssignNode(attr="a", lineno=4, col_offset=12, end_lineno=None, end_col_offset=None)
+        ).to_flake8(),
+    },
+)
+
 
 SRC_CHECK_CASES = (
     # These shouldn't yield any errors
@@ -201,9 +227,11 @@ SRC_CHECK_CASES = (
     CLASS_WITH_METHOD_NON_SELF_ATTR,
     SNEAKY_DEF_NOT_IN_CLASS,
     CLASS_WITH_MIXED_INSTANCE_VARNAME,
+    CLASS_WITH_NESTED_DEFINED_VAR,
     # These should yield errors
     CLASS_WITH_UNDEFINED_VAR,
     CLASS_WITH_MULTI_UNDEFINED_VAR,
+    CLASS_WITH_NESTED_UNDEFINED_VAR,
 )
 
 

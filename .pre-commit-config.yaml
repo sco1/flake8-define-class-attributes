@@ -18,7 +18,7 @@ repos:
         additional_dependencies:
           - flake8-annotations
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: check-case-conflict
       - id: check-json
@@ -35,10 +35,10 @@ repos:
       -  id: python-check-blanket-type-ignore
       -  id: python-use-type-annotations
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.7
+    rev: v0.12.12
     hooks:
       - id: ruff-check
   - repo: https://github.com/rvben/rumdl-pre-commit
-    rev: v0.0.108
+    rev: v0.0.137
     hooks:
       - id: rumdl
