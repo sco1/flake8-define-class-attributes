@@ -2,6 +2,12 @@
 
 Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (`<major>`.`<minor>`.`<patch>`)
 
+## `[v0.2.1]`
+
+### Fixed
+
+* #3 Fixed unhandled `IndexError` when attempting to resolve the name of the instance argument while inside functions nested within methods.
+
 ## `[v0.2.0]`
 
 ### Changed
