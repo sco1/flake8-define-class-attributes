@@ -57,10 +57,3 @@ ignore = [
     "D101",
     "D103",
 ]
-
-[lint.flake8-bugbear]
-extend-immutable-calls = [
-    # Typer CLI
-    "typer.Option",
-    "typer.Argument",
-]
