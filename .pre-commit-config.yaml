@@ -2,12 +2,12 @@ ci:
   autoupdate_schedule: quarterly
 
 repos:
-  - repo: https://github.com/psf/black
-    rev: 25.1.0
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 25.9.0
     hooks:
       - id: black
   - repo: https://github.com/pycqa/isort
-    rev: 6.0.1
+    rev: 7.0.0
     hooks:
       - id: isort
         name: isort
@@ -17,6 +17,7 @@ repos:
       - id: flake8
         additional_dependencies:
           - flake8-annotations
+          - flake8-define-class-attributes
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -35,10 +36,10 @@ repos:
       -  id: python-check-blanket-type-ignore
       -  id: python-use-type-annotations
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.12
+    rev: v0.14.1
     hooks:
       - id: ruff-check
   - repo: https://github.com/rvben/rumdl-pre-commit
-    rev: v0.0.137
+    rev: v0.0.166
     hooks:
       - id: rumdl
