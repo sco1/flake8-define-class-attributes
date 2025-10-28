@@ -4,6 +4,7 @@ import pytest
 
 from flake8_define_class_attributes.ast_walker import (
     AssignSpec,
+    ResolvedCallError,
     has_special_decorator,
     resolve_assign,
     resolve_attribute,
@@ -85,3 +86,12 @@ def test_resolve_instance_name(src: str, truth_out: str) -> None:
     node = tree.body[0].body[0]  # type: ignore[attr-defined]
 
     assert resolve_instance_name(node) == truth_out
+
+
+def test_assign_with_call_raises() -> None:
+    SRC = "class Foo:\n\tdef foo(self):\n\t\tself.foo().bar = 5"
+    tree = ast.parse(SRC)
+    node = tree.body[0].body[0].body[0]  # type: ignore[attr-defined]
+
+    with pytest.raises(ResolvedCallError):
+        resolve_assign(node.targets[0])

@@ -2,6 +2,12 @@
 
 Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (`<major>`.`<minor>`.`<patch>`)
 
+## `[v0.2.2]`
+
+### Fixed
+
+* #6 Fixed unhandled exception when assignment contains a function call.
+
 ## `[v0.2.1]`
 
 ### Fixed
