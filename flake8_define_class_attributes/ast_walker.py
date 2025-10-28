@@ -9,6 +9,9 @@ AST_DEF_NODES_T: t.TypeAlias = AST_FUNC_NODES_T | ast.ClassDef
 AST_ASSIGN_NODES_T: t.TypeAlias = ast.Assign | ast.AnnAssign | ast.AugAssign
 
 
+class ResolvedCallError(Exception): ...  # noqa: D101
+
+
 @t.runtime_checkable
 class HasLoc(t.Protocol):  # noqa: D101
     lineno: int
@@ -97,6 +100,10 @@ def resolve_attribute(base_node: ast.Attribute) -> AssignSpec:
     # attribute access of a nested node
     if isinstance(node, ast.Name):
         return AssignSpec(node.id, attr)
+    elif isinstance(node, ast.Call):
+        # Raise here so we can ignore function calls upstream, e.g. self.foo().bar = 5
+        # Seems easiest to control via exception rather than monkeying with the resolver return
+        raise ResolvedCallError()
     else:
         # Not sure if this can actually be reached
         raise ValueError(
@@ -226,7 +233,13 @@ class FDCAVisitor(ast.NodeVisitor):
         if self._n_contained_classdef == 0:
             return
 
-        new_nodes = resolve_assign(node)
+        # Skip instances where the resolved assignment utilizes a function call, e.g.
+        # self.foo().bar = 5
+        try:
+            new_nodes = resolve_assign(node)
+        except ResolvedCallError:
+            return
+
         if isinstance(self._context[-1], ast.ClassDef):
             self.class_vars.update(s.base for s in new_nodes)
         else:

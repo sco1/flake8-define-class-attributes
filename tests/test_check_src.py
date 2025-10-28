@@ -160,6 +160,15 @@ class Foo:
     truth_errors=set(),
 )
 
+CLASS_WITH_CALL_IN_ASSIGN = SourceCheckCase(
+    src="""\
+class Foo:
+    def beans(self):
+        self.foo().bar = 5
+""",
+    truth_errors=set(),
+)
+
 # These should yield errors
 CLASS_WITH_UNDEFINED_VAR = SourceCheckCase(
     src="""\
@@ -228,6 +237,7 @@ SRC_CHECK_CASES = (
     SNEAKY_DEF_NOT_IN_CLASS,
     CLASS_WITH_MIXED_INSTANCE_VARNAME,
     CLASS_WITH_NESTED_DEFINED_VAR,
+    CLASS_WITH_CALL_IN_ASSIGN,
     # These should yield errors
     CLASS_WITH_UNDEFINED_VAR,
     CLASS_WITH_MULTI_UNDEFINED_VAR,
