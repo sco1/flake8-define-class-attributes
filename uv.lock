@@ -217,7 +217,7 @@ wheels = [
 
 [[package]]
 name = "flake8-define-class-attributes"
-version = "0.2.1"
+version = "0.2.2"
 source = { editable = "." }
 dependencies = [
     { name = "flake8" },
