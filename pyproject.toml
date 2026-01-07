@@ -44,7 +44,7 @@ dev = [
     "isort~=7.0",
     "mypy~=1.14",
     "pre-commit~=4.0",
-    "pytest~=8.3",
+    "pytest~=9.0",
     "pytest-cov~=7.0",
     "pytest-randomly~=4.0",
     "ruff~=0.9",
@@ -81,7 +81,7 @@ warn_unused_ignores = true
 
 [tool.rumdl]
 line-length = 100
-disable = ["MD013", "MD033"]
+disable = ["MD013", "MD033", "MD059"]
 
 [tool.uv.build-backend]
 module-name = "flake8_define_class_attributes"
