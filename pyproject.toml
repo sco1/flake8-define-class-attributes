@@ -38,17 +38,17 @@ Changelog = "https://github.com/sco1/flake8-define-class-attributes/blob/main/CH
 
 [dependency-groups]
 dev = [
-    "black~=25.0",
+    "black~=26.3",
     "flake8~=7.1",
     "flake8-annotations~=3.1",
-    "isort~=7.0",
+    "isort~=8.0",
     "mypy~=1.14",
     "pre-commit~=4.0",
     "pytest~=9.0",
     "pytest-cov~=7.0",
     "pytest-randomly~=4.0",
     "ruff~=0.9",
-    "rumdl~=0.0.166",
+    "rumdl~=0.1.67",
     "sco1-bumper~=2.0",
     "tox~=4.23",
     "tox-uv~=1.17",
