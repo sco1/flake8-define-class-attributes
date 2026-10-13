@@ -42,12 +42,12 @@ dev = [
     "black~=26.3",
     "flake8~=7.1",
     "flake8-annotations~=3.1",
-    "isort~=8.0",
+    "isort~=9.0",
     "mypy~=2.2",
     "pre-commit~=4.0",
     "pytest~=9.0",
     "pytest-cov~=7.0",
-    "pytest-randomly~=4.0",
+    "pytest-randomly~=5.0",
     "ruff~=0.9",
     "rumdl~=0.2.30",
     "sco1-bumper~=2.0",
@@ -89,5 +89,5 @@ module-name = "flake8_define_class_attributes"
 module-root = ""
 
 [build-system]
-requires = ["uv_build>=0.11.26,<0.12"]
+requires = ["uv_build>=0.13.0,<0.14"]
 build-backend = "uv_build"
